@@ -57,17 +57,11 @@ Acesse: http://localhost:5679 (login: `admin`, senha: `admin123`)
 
 Importe o arquivo `workflows/WhatsApp-Contacts-Extractor-v3.json`
 
-### 4. Criar Credencial no n8n
+### 4. Observação Importante
 
-1. No n8n, vá em **Settings** → **Credentials** → **Add Credential**
-2. Busque por **Header Auth** e selecione
-3. Preencha:
-   - **Name:** `WhatsApp Token`
-   - **Header Name:** `Authorization`
-   - **Header Value:** `Bearer SEU_ACCESS_TOKEN`
-4. Salve
+O `docker-compose.yml` já libera os módulos `fs` e `path` para os nós `Code` do n8n via `NODE_FUNCTION_ALLOW_BUILTIN=fs,path`.
 
-> ⚠️ Substitua `SEU_ACCESS_TOKEN` pelo token copiado do Meta Developers
+Também não é mais necessário criar credencial manual no n8n para o token do WhatsApp: o workflow lê `WHATSAPP_ACCESS_TOKEN` diretamente do arquivo `.env`.
 
 ## Campos do CSV
 
@@ -103,6 +97,8 @@ Adicione um nó Schedule Trigger no início do fluxo para executar periodicament
   "mensagem": "7 novos contatos adicionados! Total: 347"
 }
 ```
+
+Em caso de falha na API, o fluxo agora encerra sem corromper os arquivos existentes. Se a falha acontecer depois de algumas páginas, ele salva os contatos já processados e retorna uma mensagem de aviso.
 
 ## Resetar Base de Dados
 
