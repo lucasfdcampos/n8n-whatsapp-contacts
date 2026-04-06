@@ -1,0 +1,32 @@
+services:
+  n8n:
+    build: .
+    container_name: n8n-whatsapp-contacts
+    ports:
+      - "5679:5678"
+    env_file:
+      - .env
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5679/
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/root/.n8n/workflows
+      - ./output:/output
+    restart: unless-stopped
+    networks:
+      - n8n_network
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  n8n_network:
+    driver: bridge

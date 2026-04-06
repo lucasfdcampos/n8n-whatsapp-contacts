@@ -1,0 +1,186 @@
+{
+  "name": "WhatsApp Contacts - Incremental",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 340],
+      "id": "trigger",
+      "name": "Executar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuração do fluxo incremental\nconst fs = require('fs');\nconst path = require('path');\n\nconst outputDir = '/output';\nconst controleFile = path.join(outputDir, 'contatos_controle.json');\nconst csvFile = path.join(outputDir, 'contatos_whatsapp_acumulado.csv');\nconst jsonFile = path.join(outputDir, 'contatos_whatsapp_acumulado.json');\n\n// Criar diretório se não existir\nif (!fs.existsSync(outputDir)) {\n  fs.mkdirSync(outputDir, { recursive: true });\n}\n\n// Carregar contatos já existentes\nlet contatosExistentes = [];\nlet numerosConhecidos = new Set();\nlet ultimaExecucao = null;\n\nif (fs.existsSync(controleFile)) {\n  try {\n    const controle = JSON.parse(fs.readFileSync(controleFile, 'utf8'));\n    contatosExistentes = controle.contatos || [];\n    ultimaExecucao = controle.ultima_execucao || null;\n    \n    // Criar Set com números normalizados\n    for (const c of contatosExistentes) {\n      const num = (c.numero || '').replace(/\\D/g, '');\n      if (num) numerosConhecidos.add(num);\n    }\n    \n    console.log(`Controle carregado: ${contatosExistentes.length} contatos existentes`);\n  } catch (e) {\n    console.log('Erro ao carregar controle, iniciando fresh:', e.message);\n  }\n}\n\nreturn {\n  json: {\n    contatos_existentes: contatosExistentes,\n    numeros_conhecidos: Array.from(numerosConhecidos),\n    total_existentes: contatosExistentes.length,\n    ultima_execucao: ultimaExecucao,\n    output_dir: outputDir,\n    controle_file: controleFile,\n    csv_file: csvFile,\n    json_file: jsonFile,\n    api_version: 'v19.0',\n    base_url: 'https://graph.facebook.com',\n    max_pages: 50,\n    limit: 100\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 340],
+      "id": "carregar-controle",
+      "name": "Carregar Controle"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.base_url }}/{{ $json.api_version }}/{{ $env.WHATSAPP_BUSINESS_ACCOUNT_ID }}/conversations",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "={{ $json.limit }}"
+            },
+            {
+              "name": "fields",
+              "value": "id,participants,start_time,last_message{from,to,text,timestamp}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": { "response": { "responseFormat": "json" } },
+          "error": { "continueOnFail": true }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 340],
+      "id": "buscar-p1",
+      "name": "Buscar P1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Processar primeira página e preparar paginação\nconst controle = $('Carregar Controle').first().json;\nconst resposta = $input.first().json;\n\nif (resposta.error) {\n  return { json: { erro: true, mensagem: resposta.error.message } };\n}\n\nlet todasConversas = resposta.data || [];\nlet paging = resposta.paging;\n\nreturn {\n  json: {\n    conversas: todasConversas,\n    total_acumulado: todasConversas.length,\n    has_next: paging?.cursors?.after ? true : false,\n    next_cursor: paging?.cursors?.after || null,\n    paginas_processadas: 1,\n    max_pages: controle.max_pages,\n    numeros_conhecidos: controle.numeros_conhecidos,\n    contatos_existentes: controle.contatos_existentes,\n    controle_file: controle.controle_file,\n    csv_file: controle.csv_file,\n    json_file: controle.json_file,\n    base_url: controle.base_url,\n    api_version: controle.api_version,\n    limit: controle.limit\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 340],
+      "id": "proc-p1",
+      "name": "Processar P1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [
+            { "id": "has-next", "leftValue": "={{ $json.has_next }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } },
+            { "id": "not-max", "leftValue": "={{ $json.paginas_processadas }}", "rightValue": "={{ $json.max_pages }}", "operator": { "type": "number", "operation": "lt" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1120, 340],
+      "id": "tem-mais",
+      "name": "Tem Mais?"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.base_url }}/{{ $json.api_version }}/{{ $env.WHATSAPP_BUSINESS_ACCOUNT_ID }}/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "limit", "value": "={{ $json.limit }}" },
+            { "name": "after", "value": "={{ $json.next_cursor }}" },
+            { "name": "fields", "value": "id,participants,start_time,last_message{from,to,text,timestamp}" }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": { "response": { "responseFormat": "json" } },
+          "error": { "continueOnFail": true }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 340],
+      "id": "buscar-prox",
+      "name": "Buscar Próxima",
+      "credentials": {
+        "httpHeaderAuth": { "id": "whatsapp-auth", "name": "WhatsApp Token" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Acumular conversas\nconst estado = $('Tem Mais?').first().json;\nconst nova = $input.first().json;\n\nconst novasConversas = nova.data || [];\nconst todasConversas = [...estado.conversas, ...novasConversas];\n\nconst paging = nova.paging;\nconst paginas = estado.paginas_processadas + 1;\n\nreturn {\n  json: {\n    conversas: todasConversas,\n    total_acumulado: todasConversas.length,\n    has_next: paging?.cursors?.after && paginas < estado.max_pages ? true : false,\n    next_cursor: paging?.cursors?.after || null,\n    paginas_processadas: paginas,\n    max_pages: estado.max_pages,\n    numeros_conhecidos: estado.numeros_conhecidos,\n    contatos_existentes: estado.contatos_existentes,\n    controle_file: estado.controle_file,\n    csv_file: estado.csv_file,\n    json_file: estado.json_file,\n    base_url: estado.base_url,\n    api_version: estado.api_version,\n    limit: estado.limit\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 340],
+      "id": "acumular",
+      "name": "Acumular"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair contatos INCREMENTAL - apenas novos\nconst fs = require('fs');\nconst dados = $input.first().json;\nconst conversas = dados.conversas || [];\nconst phoneId = $env.WHATSAPP_PHONE_NUMBER_ID;\n\n// Set de números já conhecidos\nconst numerosConhecidos = new Set(dados.numeros_conhecidos);\nconst contatosExistentes = dados.contatos_existentes;\n\n// Map para novos contatos (para evitar duplicatas entre novas conversas)\nconst novosContatosMap = new Map();\nlet contatosAtualizados = 0;\n\nfor (const conversa of conversas) {\n  if (!conversa.participants) continue;\n  \n  for (const p of conversa.participants) {\n    if (p.id === phoneId || p.id === 'ADMIN') continue;\n    \n    // Normalizar número\n    const numeroNormalizado = (p.wa_id || p.id || '').replace(/\\D/g, '');\n    if (!numeroNormalizado) continue;\n    \n    // Verificar se é NOVO contato\n    if (!numerosConhecidos.has(numeroNormalizado)) {\n      // Novo contato!\n      let nome = p.name;\n      if (!nome || nome === 'ADMIN') {\n        nome = `Contato ${numeroNormalizado.slice(-4)}`;\n      }\n      \n      // Verificar se já adicionamos neste ciclo\n      if (!novosContatosMap.has(numeroNormalizado)) {\n        novosContatosMap.set(numeroNormalizado, {\n          nome: nome,\n          numero: numeroNormalizado,\n          whatsapp: p.wa_id || p.id,\n          tipo: p.type || 'individual',\n          conversa_id: conversa.id,\n          ultima_interacao: conversa.start_time,\n          ultima_mensagem: conversa.last_message?.text?.body || '',\n          timestamp_mensagem: conversa.last_message?.timestamp || null,\n          data_cadastro: new Date().toISOString(),\n          origem: 'novo'\n        });\n      }\n    } else {\n      // Contato já existe - verificar se precisa atualizar dados\n      const existente = contatosExistentes.find(c => {\n        const numExistente = (c.numero || '').replace(/\\D/g, '');\n        return numExistente === numeroNormalizado;\n      });\n      \n      if (existente && conversa.start_time) {\n        // Atualizar se conversa mais recente\n        if (!existente.ultima_interacao || conversa.start_time > existente.ultima_interacao) {\n          existente.ultima_interacao = conversa.start_time;\n          existente.conversa_id = conversa.id;\n          if (conversa.last_message?.text?.body) {\n            existente.ultima_mensagem = conversa.last_message.text.body;\n          }\n          existente.data_atualizacao = new Date().toISOString();\n          existente.origem = 'atualizado';\n          contatosAtualizados++;\n        }\n      }\n    }\n  }\n}\n\n// Converter novos contatos para array\nconst novosContatos = Array.from(novosContatosMap.values());\n\n// Adicionar formato internacional\nfor (const c of novosContatos) {\n  c.formato_internacional = formatarNumero(c.numero);\n}\nfor (const c of contatosExistentes) {\n  if (!c.formato_internacional) {\n    c.formato_internacional = formatarNumero(c.numero);\n  }\n}\n\nfunction formatarNumero(numero) {\n  if (!numero) return '';\n  if (numero.length === 13 && numero.startsWith('55')) {\n    return `+55 (${numero.substring(2,4)}) ${numero.substring(4,9)}-${numero.substring(9)}`;\n  }\n  if (numero.length === 12 && numero.startsWith('55')) {\n    return `+55 (${numero.substring(2,4)}) ${numero.substring(4,8)}-${numero.substring(8)}`;\n  }\n  return numero.startsWith('+') ? numero : '+' + numero;\n}\n\n// Combinar: existentes + novos (ordenados por data de cadastro)\nconst todosContatos = [...contatosExistentes, ...novosContatos];\n\n// Ordenar por última interação\ntodosContatos.sort((a, b) => {\n  if (!a.ultima_interacao) return 1;\n  if (!b.ultima_interacao) return -1;\n  return new Date(b.ultima_interacao) - new Date(a.ultima_interacao);\n});\n\nreturn {\n  json: {\n    total_final: todosContatos.length,\n    total_existentes: contatosExistentes.length,\n    total_novos: novosContatos.length,\n    total_atualizados: contatosAtualizados,\n    total_conversas: conversas.length,\n    paginas_processadas: dados.paginas_processadas,\n    contatos: todosContatos,\n    novos_contatos: novosContatos,\n    controle_file: dados.controle_file,\n    csv_file: dados.csv_file,\n    json_file: dados.json_file,\n    timestamp: new Date().toISOString(),\n    sucesso: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 500],
+      "id": "extrair-incremental",
+      "name": "Processar Incremental"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Salvar todos os arquivos\nconst fs = require('fs');\nconst dados = $input.first().json;\n\nconst contatos = dados.contatos;\nconst novosContatos = dados.novos_contatos;\n\n// ===== ARQUIVO DE CONTROLE (JSON com todos os dados) =====\nconst controle = {\n  ultima_execucao: dados.timestamp,\n  total_contatos: dados.total_final,\n  total_novos_esta_execucao: dados.total_novos,\n  paginas_processadas: dados.paginas_processadas,\n  contatos: contatos\n};\nfs.writeFileSync(dados.controle_file, JSON.stringify(controle, null, 2), 'utf8');\n\n// ===== CSV ACUMULADO (com BOM para Excel) =====\nconst headers = ['nome', 'numero', 'whatsapp', 'tipo', 'formato_internacional', 'ultima_interacao', 'ultima_mensagem', 'data_cadastro', 'origem'];\nconst csvLinhas = [headers.join(',')];\n\nfor (const c of contatos) {\n  csvLinhas.push([\n    escapeCsv(c.nome),\n    c.numero,\n    c.whatsapp,\n    c.tipo,\n    escapeCsv(c.formato_internacional),\n    c.ultima_interacao || '',\n    escapeCsv(c.ultima_mensagem || ''),\n    c.data_cadastro || '',\n    c.origem || ''\n  ].join(','));\n}\n\nconst csv = '\\uFEFF' + csvLinhas.join('\\n');\nfs.writeFileSync(dados.csv_file, csv, 'utf8');\n\n// ===== JSON COMPLETO =====\nfs.writeFileSync(dados.json_file, JSON.stringify(contatos, null, 2), 'utf8');\n\n// ===== ARQUIVO DE RESUMO (apenas novos desta execução) =====\nif (novosContatos.length > 0) {\n  const resumoFile = dados.csv_file.replace('.csv', '_novos_' + dados.timestamp.split('T')[0] + '.json');\n  fs.writeFileSync(resumoFile, JSON.stringify({\n    data_execucao: dados.timestamp,\n    total_novos: novosContatos.length,\n    novos_contatos: novosContatos\n  }, null, 2), 'utf8');\n}\n\nfunction escapeCsv(valor) {\n  if (!valor) return '';\n  const str = String(valor);\n  if (str.includes(',') || str.includes('\"') || str.includes('\\n')) {\n    return '\"' + str.replace(/\"/g, '\"\"') + '\"';\n  }\n  return str;\n}\n\nreturn {\n  json: {\n    sucesso: true,\n    total_final: dados.total_final,\n    total_existentes: dados.total_existentes,\n    total_novos: dados.total_novos,\n    total_atualizados: dados.total_atualizados,\n    paginas_processadas: dados.paginas_processadas,\n    arquivos: {\n      controle: dados.controle_file,\n      csv: dados.csv_file,\n      json: dados.json_file\n    },\n    mensagem: dados.total_novos > 0 \n      ? `${dados.total_novos} novos contatos adicionados! Total: ${dados.total_final}`\n      : `Nenhum contato novo. Total mantido: ${dados.total_final}`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 500],
+      "id": "salvar-tudo",
+      "name": "Salvar Arquivos"
+    },
+    {
+      "parameters": {
+        "content": "## 📊 Sistema Incremental\n\n**Como funciona:**\n\n1. Carrega arquivo de controle com contatos já salvos\n2. Busca TODAS as conversas (até 50 páginas)\n3. Compara com números já conhecidos\n4. Adiciona apenas NOVOS contatos\n5. Atualiza dados de contatos existentes\n6. Salva controle para próxima execução\n\n**Arquivos gerados:**\n- `contatos_controle.json` - Estado interno\n- `contatos_whatsapp_acumulado.csv` - CSV completo\n- `contatos_whatsapp_acumulado.json` - Backup JSON\n- `contatos_whatsapp_novos_YYYY-MM-DD.json` - Apenas novos desta execução",
+        "height": 300,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 180],
+      "id": "nota1",
+      "name": "Como Funciona"
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Resultado\n\n**Antes:** {{ $json.total_existentes }} contatos\n**Novos:** +{{ $json.total_novos }}\n**Atualizados:** {{ $json.total_atualizados }}\n**Total Final:** {{ $json.total_final }}\n\n📁 Arquivos:\n- {{ $json.arquivos.csv }}\n- {{ $json.arquivos.json }}\n\n{{ $json.mensagem }}",
+        "height": 200,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1560, 500],
+      "id": "nota2",
+      "name": "Resultado"
+    }
+  ],
+  "connections": {
+    "Executar": { "main": [[{"node": "Carregar Controle", "type": "main", "index": 0}]] },
+    "Carregar Controle": { "main": [[{"node": "Buscar P1", "type": "main", "index": 0}]] },
+    "Buscar P1": { "main": [[{"node": "Processar P1", "type": "main", "index": 0}]] },
+    "Processar P1": { "main": [[{"node": "Tem Mais?", "type": "main", "index": 0}]] },
+    "Tem Mais?": {
+      "main": [
+        [{"node": "Buscar Próxima", "type": "main", "index": 0}],
+        [{"node": "Processar Incremental", "type": "main", "index": 0}]
+      ]
+    },
+    "Buscar Próxima": { "main": [[{"node": "Acumular", "type": "main", "index": 0}]] },
+    "Acumular": { "main": [[{"node": "Tem Mais?", "type": "main", "index": 0}]] },
+    "Processar Incremental": { "main": [[{"node": "Salvar Arquivos", "type": "main", "index": 0}]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
