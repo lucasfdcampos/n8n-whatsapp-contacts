@@ -6,8 +6,8 @@ Sistema n8n para extrair contatos do WhatsApp Business API de forma incremental.
 
 Guia simples para usuario final:
 
-- Linux: use `make setup` e depois `make up`
-- Windows: execute `start.bat`
+- Windows ou Linux: use `python manage.py setup` e depois `python manage.py up`
+- Alternativas prontas: `Makefile` no Linux e `start.bat` no Windows
 - Passo a passo completo: veja `INSTALACAO.md`
 
 ## Como Funciona
@@ -56,13 +56,13 @@ WHATSAPP_ACCESS_TOKEN=seu_access_token
 ### 2. Iniciar n8n
 
 ```bash
-make setup
-make up
+python manage.py setup
+python manage.py up
 ```
 
 Acesse: http://localhost:5679 (login: `admin`, senha: `admin123`)
 
-No Windows, basta executar `start.bat`.
+No Windows, se preferir, tambem basta executar `start.bat`.
 
 ### 3. Importar Workflow
 
