@@ -24,40 +24,6 @@ cd n8n-whatsapp-contacts
 2. Extraia a pasta
 3. Abra a pasta extraida
 
-## Opcao recomendada: comando unico para Windows e Linux
-
-Se voce tiver Python 3 instalado, use os mesmos comandos em qualquer sistema:
-
-```bash
-python manage.py setup
-python manage.py up
-```
-
-Se no Windows o comando `python` nao funcionar, tente:
-
-```bash
-py manage.py setup
-py manage.py up
-```
-
-Na primeira execucao, o script cria o arquivo `.env` automaticamente.
-
-Depois disso:
-
-1. Abra o arquivo `.env`
-2. Preencha seus dados do WhatsApp
-3. Rode novamente `python manage.py up`
-4. Acesse `http://localhost:5679`
-
-Comandos extras:
-
-```bash
-python manage.py down
-python manage.py logs
-python manage.py status
-python manage.py reset-output
-```
-
 ## Linux
 
 ### 1. Criar o arquivo `.env`
@@ -150,7 +116,6 @@ Arquivos principais:
 - O arquivo `.env` nao sobe para o GitHub
 - O `docker compose` usa esse `.env` para configurar o container e tambem para valores como porta e login do n8n
 - Os modulos `fs` e `path` ja estao liberados para os nos `Code` do n8n
-- O arquivo `manage.py` funciona como launcher cross-platform
 
 ## Solucao de problemas
 
