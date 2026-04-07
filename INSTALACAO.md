@@ -1,40 +1,98 @@
-# Instalacao Rapida
+# Instalacao
 
-## O que voce precisa
+Este guia foi pensado para uma pessoa comum conseguir instalar o projeto sem precisar entender n8n, Docker Compose ou variaveis de ambiente em profundidade.
 
-- Docker Desktop instalado
-- Internet
-- Seus dados do WhatsApp Business API:
+## Antes de comecar
+
+Voce precisa de:
+
+- Docker Desktop instalado e aberto
+- acesso a internet
+- estes 3 dados do WhatsApp Business API:
   - `WHATSAPP_PHONE_NUMBER_ID`
   - `WHATSAPP_BUSINESS_ACCOUNT_ID`
   - `WHATSAPP_ACCESS_TOKEN`
 
-## Opcao 1: baixar o projeto
+## Baixar o projeto
 
-### Via Git
+Voce pode escolher uma das opcoes:
+
+### Opcao A: baixar ZIP
+
+1. Baixe o ZIP do repositório no GitHub
+2. Extraia a pasta
+3. Abra a pasta do projeto
+
+### Opcao B: clonar com Git
 
 ```bash
 git clone https://github.com/lucasfdcampos/n8n-whatsapp-contacts.git
 cd n8n-whatsapp-contacts
 ```
 
-### Via ZIP
+## Instalacao no Windows
 
-1. Baixe o ZIP do repositório no GitHub
-2. Extraia a pasta
-3. Abra a pasta extraida
+### Passo 1. Preparar a configuracao
 
-## Linux
+Execute:
 
-### 1. Criar o arquivo `.env`
+`setup.bat`
 
-```bash
-make setup
+O que ele faz:
+
+- verifica se o Docker existe no computador
+- cria o arquivo `.env` se ele ainda nao existir
+- abre o `.env` no Bloco de Notas
+
+### Passo 2. Preencher o arquivo `.env`
+
+No arquivo `.env`, preencha estes campos:
+
+```env
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_BUSINESS_ACCOUNT_ID=
+WHATSAPP_ACCESS_TOKEN=
 ```
 
-Isso cria o arquivo `.env` automaticamente com base no `.env.example`.
+Voce tambem pode trocar, se quiser:
 
-### 2. Preencher seus dados
+- `N8N_BASIC_AUTH_USER`
+- `N8N_BASIC_AUTH_PASSWORD`
+- `N8N_PUBLIC_PORT`
+
+### Passo 3. Iniciar o sistema
+
+Execute:
+
+`run.bat`
+
+O que ele faz:
+
+- valida se o `.env` existe
+- valida se os 3 campos obrigatorios foram preenchidos
+- inicia o Docker
+- mostra o endereco, usuario e senha do n8n
+
+### Passo 4. Parar o sistema
+
+Execute:
+
+`stop.bat`
+
+## Instalacao no Linux
+
+### Passo 1. Preparar a configuracao
+
+No terminal, dentro da pasta do projeto:
+
+```bash
+chmod +x setup.sh run.sh stop.sh
+./setup.sh
+```
+
+O script cria o `.env` se ele ainda nao existir.
+
+### Passo 2. Preencher o arquivo `.env`
 
 Abra o arquivo `.env` e preencha:
 
@@ -44,63 +102,43 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=
 WHATSAPP_ACCESS_TOKEN=
 ```
 
-### 3. Subir o sistema
+Voce tambem pode trocar, se quiser:
+
+- `N8N_BASIC_AUTH_USER`
+- `N8N_BASIC_AUTH_PASSWORD`
+- `N8N_PUBLIC_PORT`
+
+### Passo 3. Iniciar o sistema
 
 ```bash
+./run.sh
+```
+
+O script valida o `.env` antes de iniciar o Docker.
+
+### Passo 4. Parar o sistema
+
+```bash
+./stop.sh
+```
+
+## Alternativa para usuarios tecnicos no Linux
+
+Se preferir `make`:
+
+```bash
+make setup
 make up
 ```
 
-O comando valida se os campos obrigatorios do `.env` foram preenchidos antes de iniciar o Docker.
+## Primeiro acesso ao n8n
 
-### 4. Abrir o n8n
+Depois de iniciar o ambiente:
 
-Acesse:
-
-`http://localhost:5679`
-
-Login padrao:
-
-- usuario: `admin`
-- senha: `admin123`
-
-### 5. Importar o workflow
-
-Importe este arquivo no n8n:
-
-`workflows/WhatsApp-Contacts-Extractor-v3.json`
-
-## Windows
-
-### 1. Criar o arquivo `.env`
-
-Clique duas vezes em:
-
-`start.bat`
-
-Na primeira execucao, ele cria o arquivo `.env` automaticamente e pede para voce preencher os dados.
-Se o `.env` estiver incompleto, ele abre o arquivo no Bloco de Notas e nao tenta subir o Docker antes da hora.
-
-### 2. Preencher seus dados
-
-Abra o arquivo `.env` no Bloco de Notas e preencha:
-
-```env
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_BUSINESS_ACCOUNT_ID=
-WHATSAPP_ACCESS_TOKEN=
-```
-
-### 3. Subir o sistema
-
-Clique novamente em:
-
-`start.bat`
-
-### 4. Parar o sistema
-
-Clique em:
-
-`stop.bat`
+1. Abra `http://localhost:5679`
+2. Entre com o usuario e senha do `.env`
+3. Importe o arquivo `workflows/WhatsApp-Contacts-Extractor-v3.json`
+4. Clique em executar o workflow
 
 ## Onde ficam os arquivos gerados
 
@@ -114,22 +152,23 @@ Arquivos principais:
 - `contatos_whatsapp_acumulado.csv`
 - `contatos_whatsapp_acumulado.json`
 
-## Observacoes
-
-- O arquivo `.env` nao sobe para o GitHub
-- O `docker compose` usa esse `.env` para configurar o container e tambem para valores como porta e login do n8n
-- Os modulos `fs` e `path` ja estao liberados para os nos `Code` do n8n
-
-## Solucao de problemas
+## Se algo der errado
 
 ### Docker nao abre
 
-Verifique se o Docker Desktop esta aberto antes de executar os scripts.
+- confirme se o Docker Desktop esta instalado
+- confirme se ele esta aberto antes de executar os scripts
 
-### Porta ocupada
+### O sistema nao inicia
 
-Se `http://localhost:5679` nao abrir, pode haver outro servico usando essa porta.
+- verifique se o arquivo `.env` existe
+- confira se os 3 campos obrigatorios foram preenchidos
 
 ### Token invalido
 
-Revise o valor de `WHATSAPP_ACCESS_TOKEN` no `.env`
+- revise o valor de `WHATSAPP_ACCESS_TOKEN`
+- gere um novo token no Meta for Developers se necessario
+
+### Porta ocupada
+
+Se `http://localhost:5679` nao abrir, altere `N8N_PUBLIC_PORT` no `.env`
