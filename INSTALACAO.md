@@ -2,6 +2,12 @@
 
 Este guia foi pensado para uma pessoa comum conseguir instalar o projeto sem precisar entender n8n, Docker Compose ou variaveis de ambiente em profundidade.
 
+## Ir direto para
+
+- Se usa Windows, clique em [Instalacao no Windows](#instalacao-no-windows)
+- Se usa Linux, clique em [Instalacao no Linux](#instalacao-no-linux)
+- Se quer apenas acessar o n8n depois de instalar, clique em [Primeiro acesso ao n8n](#primeiro-acesso-ao-n8n)
+
 ## Antes de comecar
 
 Voce precisa de:
