@@ -1,6 +1,14 @@
 # WhatsApp Business - Extrator de Contatos (Incremental)
 
-Sistema n8n para extrair contatos do WhatsApp Business API de forma **incremental** - salva o estado e na próxima execução adiciona apenas os novos.
+Sistema n8n para extrair contatos do WhatsApp Business API de forma incremental. O projeto foi preparado para que outra pessoa consiga usar com poucos passos: criar o `.env`, subir o Docker e importar o workflow.
+
+## Instalacao Rapida
+
+Guia simples para usuario final:
+
+- Linux: use `make setup` e depois `make up`
+- Windows: execute `start.bat`
+- Passo a passo completo: veja `INSTALACAO.md`
 
 ## Como Funciona
 
@@ -32,7 +40,7 @@ Sistema n8n para extrair contatos do WhatsApp Business API de forma **incrementa
 ### 1. Credenciais do WhatsApp Business
 
 ```bash
-# Edite o arquivo .env
+# O arquivo .env pode ser criado automaticamente a partir do .env.example
 WHATSAPP_PHONE_NUMBER_ID=seu_phone_number_id
 WHATSAPP_BUSINESS_ACCOUNT_ID=seu_business_account_id
 WHATSAPP_ACCESS_TOKEN=seu_access_token
@@ -48,10 +56,13 @@ WHATSAPP_ACCESS_TOKEN=seu_access_token
 ### 2. Iniciar n8n
 
 ```bash
-docker-compose up -d --build
+make setup
+make up
 ```
 
 Acesse: http://localhost:5679 (login: `admin`, senha: `admin123`)
+
+No Windows, basta executar `start.bat`.
 
 ### 3. Importar Workflow
 
@@ -62,6 +73,8 @@ Importe o arquivo `workflows/WhatsApp-Contacts-Extractor-v3.json`
 O `docker-compose.yml` já libera os módulos `fs` e `path` para os nós `Code` do n8n via `NODE_FUNCTION_ALLOW_BUILTIN=fs,path`.
 
 Também não é mais necessário criar credencial manual no n8n para o token do WhatsApp: o workflow lê `WHATSAPP_ACCESS_TOKEN` diretamente do arquivo `.env`.
+
+O `docker-compose.yml` também aceita valores do `.env` para porta pública, login do n8n e outras opções básicas, então o usuário final edita praticamente um arquivo só.
 
 ## Campos do CSV
 
