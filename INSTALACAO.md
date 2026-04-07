@@ -50,6 +50,8 @@ WHATSAPP_ACCESS_TOKEN=
 make up
 ```
 
+O comando valida se os campos obrigatorios do `.env` foram preenchidos antes de iniciar o Docker.
+
 ### 4. Abrir o n8n
 
 Acesse:
@@ -76,6 +78,7 @@ Clique duas vezes em:
 `start.bat`
 
 Na primeira execucao, ele cria o arquivo `.env` automaticamente e pede para voce preencher os dados.
+Se o `.env` estiver incompleto, ele abre o arquivo no Bloco de Notas e nao tenta subir o Docker antes da hora.
 
 ### 2. Preencher seus dados
 

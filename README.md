@@ -6,8 +6,8 @@ Sistema n8n para extrair contatos do WhatsApp Business API de forma incremental.
 
 Guia simples para usuario final:
 
-- Linux: use `make setup` e depois `make up`
-- Windows: execute `start.bat`
+- Linux: use `make setup`, edite o `.env` e depois `make up`
+- Windows: execute `start.bat`; ele cria e valida o `.env` antes de subir
 - Passo a passo completo: veja `INSTALACAO.md`
 
 ## Como Funciona
@@ -62,7 +62,7 @@ make up
 
 Acesse: http://localhost:5679 (login: `admin`, senha: `admin123`)
 
-No Windows, basta executar `start.bat`.
+No Windows, `start.bat` cria o `.env` se necessario, abre o arquivo para edicao e so sobe o Docker quando os campos obrigatorios estiverem preenchidos.
 
 ### 3. Importar Workflow
 
